@@ -1,0 +1,31 @@
+[project]
+name = "postgresql-testing"
+version = "0.0.0"
+description = "PostgreSQL testing helpers"
+readme = "README.md"
+authors = [
+    { name = "Oli Russell", email = "mrxoliver@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "psycopg[binary]==3.*"
+]
+
+[project.urls]
+repository = "https://github.com/leontrolski/postgresql-testing"
+
+[build-system]
+requires = ["uv_build>=0.11.7,<0.12.0"]
+build-backend = "uv_build"
+
+
+[dependency-groups]
+test = [
+    "postgresql-binaries==15.*",
+    "pytest ",
+    "mypy ",
+    "ruff",
+]
+
+[tool.ruff]
+line-length = 120
