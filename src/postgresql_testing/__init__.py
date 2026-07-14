@@ -14,6 +14,9 @@ SUPERUSER = "postgres"
 ROOT_DATABASE = "postgres"
 
 
+class PostgresqlTestingError(RuntimeError): ...
+
+
 @dataclass(kw_only=True)
 class ClusterConfig:
     host: str
@@ -73,7 +76,7 @@ def initdb(
 ) -> None:
     if directory.exists():
         if on_existing == "raise":
-            raise RuntimeError(f"Directory {directory} already exists")
+            raise PostgresqlTestingError(f"Directory {directory} already exists")
         if on_existing == "replace":
             shutil.rmtree(directory)
         if on_existing == "use":
@@ -140,7 +143,7 @@ def create_database(
     c: DatabaseConfig,
     *,
     template: str | None = None,
-    on_existing: Literal["raise", "replace"] = "replace",
+    on_existing: Literal["raise", "use", "replace"] = "replace",
 ) -> None:
     template_str = "" if template is None else f'WITH TEMPLATE "{template}"'
     sql_create_database = f'CREATE DATABASE "{c.database}" {template_str} OWNER "{c.user}" STRATEGY=FILE_COPY'
@@ -151,7 +154,9 @@ def create_database(
             cur.execute(sql_create_database)
         except psycopg.errors.DuplicateDatabase:
             if on_existing == "raise":
-                raise RuntimeError(f"Database {c.database} already exists")
+                raise PostgresqlTestingError(f"Database {c.database} already exists")
+            if on_existing == "use":
+                pass
             if on_existing == "replace":
                 cur.execute(f'DROP DATABASE "{c.database}"')
                 cur.execute(sql_create_database)
@@ -172,7 +177,7 @@ def create_template(
         template_exists = bool(cur.execute(f"SELECT 1 FROM pg_database WHERE datname = '{template}'").fetchall())
         if template_exists:
             if on_existing == "raise":
-                raise RuntimeError(f"Template database {template} already exists")
+                raise PostgresqlTestingError(f"Template database {template} already exists")
             if on_existing == "replace":
                 cur.execute(f"UPDATE pg_database SET datistemplate = false WHERE datname='{template}'")
                 cur.execute(f'DROP DATABASE "{template}"')
@@ -190,7 +195,7 @@ def dump_archive(
 ) -> None:
     if archive.exists():
         if on_existing == "raise":
-            raise RuntimeError(f"Archive {archive} already exists")
+            raise PostgresqlTestingError(f"Archive {archive} already exists")
         if on_existing == "replace":
             archive.unlink()
 
@@ -232,4 +237,4 @@ def _try_connect(dsn: str) -> None:
             return
         except psycopg.OperationalError:
             pass
-    raise RuntimeError(f"Could not connect to {dsn}")
+    raise PostgresqlTestingError(f"Could not connect to {dsn}")
