@@ -116,8 +116,16 @@ def serve(c: ClusterConfig) -> Iterator[None]:
             _try_connect(c.superuser().dsn)
             yield
         finally:
+            # Stop any ongoing queries
+            with psycopg.connect(c.superuser().dsn) as conn, conn.cursor() as cur:
+                cur.execute("SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE pid <> pg_backend_pid()")
+            # Shutdown
             process.terminate()
-            process.wait()
+            try:
+                process.wait(timeout=1)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait(timeout=5)
 
 
 def ensure_user(c: DatabaseConfig) -> None:
