@@ -8,9 +8,8 @@ import subprocess
 from typing import Iterator, Literal, Self
 import postgresql_binaries
 import psycopg
-import tarfile
 
-DEFAULT_DIR = Path("/tmp/.postgresql_testing")
+DEFAULT_DIR = Path("/tmp/postgresql-testing")
 SUPERUSER = "postgres"
 ROOT_DATABASE = "postgres"
 
@@ -72,7 +71,6 @@ def initdb(
     *,
     on_existing: Literal["raise", "use", "replace"] = "raise",
 ) -> None:
-    """Call `initdb` with some sensible arguments for testing."""
     if directory.exists():
         if on_existing == "raise":
             raise RuntimeError(f"Directory {directory} already exists")
@@ -100,7 +98,6 @@ def initdb(
 
 @contextmanager
 def serve(c: ClusterConfig) -> Iterator[None]:
-    """Call `postgres` with some sensible arguments."""
     c.stderr.parent.mkdir(parents=True, exist_ok=True)
     with open(c.stderr, "wb") as stderr_f:
         cmd = [
@@ -121,6 +118,38 @@ def serve(c: ClusterConfig) -> Iterator[None]:
         finally:
             process.terminate()
             process.wait()
+
+
+def ensure_user(c: DatabaseConfig) -> None:
+    with psycopg.connect(c.superuser().dsn) as conn, conn.cursor() as cur:
+        try:
+            cur.execute(f"CREATE ROLE \"{c.user}\" LOGIN PASSWORD '{c.password}'")
+        except psycopg.errors.DuplicateObject:
+            pass
+
+
+def create_database(
+    c: DatabaseConfig,
+    *,
+    template: str | None = None,
+    on_existing: Literal["raise", "replace"] = "replace",
+) -> None:
+    template_str = "" if template is None else f'WITH TEMPLATE "{template}"'
+    sql_create_database = f'CREATE DATABASE "{c.database}" {template_str} OWNER "{c.user}" STRATEGY=FILE_COPY'
+
+    with psycopg.connect(c.superuser().dsn) as conn, conn.cursor() as cur:
+        conn.autocommit = True
+        try:
+            cur.execute(sql_create_database)
+        except psycopg.errors.DuplicateDatabase:
+            if on_existing == "raise":
+                raise RuntimeError(f"Database {c.database} already exists")
+            if on_existing == "replace":
+                cur.execute(f'DROP DATABASE "{c.database}"')
+                cur.execute(sql_create_database)
+
+
+# More experimental functions
 
 
 @contextmanager
@@ -145,75 +174,46 @@ def create_template(
         cur.execute(f"UPDATE pg_database SET datistemplate = true WHERE datname='{template}'")
 
 
-def ensure_user(c: DatabaseConfig) -> None:
-    with psycopg.connect(c.superuser().dsn) as conn, conn.cursor() as cur:
-        try:
-            cur.execute(f"CREATE ROLE \"{c.user}\" LOGIN PASSWORD '{c.password}'")
-        except psycopg.errors.DuplicateObject:
-            pass
-
-
-def create_database(
-    c: DatabaseConfig,
-    *,
-    template: str | None = None,
-    on_existing: Literal["raise", "replace"] = "replace",
-) -> None:
-    """Create a Postgres database.
-
-    - Optionally pass in a template.
-    - Takes in the tens of ms for a small db.
-    """
-    template_str = "" if template is None else f'WITH TEMPLATE "{template}"'
-    sql_create_database = f'CREATE DATABASE "{c.database}" {template_str} OWNER "{c.user}" STRATEGY=FILE_COPY'
-
-    with psycopg.connect(c.superuser().dsn) as conn, conn.cursor() as cur:
-        conn.autocommit = True
-        try:
-            cur.execute(sql_create_database)
-        except psycopg.errors.DuplicateDatabase:
-            if on_existing == "raise":
-                raise RuntimeError(f"Database {c.database} already exists")
-            if on_existing == "replace":
-                cur.execute(f'DROP DATABASE "{c.database}"')
-                cur.execute(sql_create_database)
-
-
 def dump_archive(
-    directory: Path,
+    c: DatabaseConfig,
     archive: Path,
     *,
     on_existing: Literal["raise", "replace"] = "replace",
 ) -> None:
-    """Dump the entirety of a Postgres cluster to a tar archive.
-
-    - Archives are not very portable (between system architectures or Postgres
-      versions).
-    - Takes in the hundreds of ms for a small db.
-    """
     if archive.exists():
         if on_existing == "raise":
             raise RuntimeError(f"Archive {archive} already exists")
-        archive.unlink()
+        if on_existing == "replace":
+            archive.unlink()
 
-    with tarfile.open(archive, "w") as tar:
-        tar.add(directory, arcname=directory.name)
+    cmd: list[str] = [
+        str(postgresql_binaries.bin() / "pg_dump"),
+        c.dsn,
+        *("--file", str(archive)),
+        *("--format", "t"),
+        *("--compress", "0"),
+        "--no-sync",
+    ]
+    subprocess.check_call(cmd)
 
 
 def load_archive(
     archive: Path,
-    directory: Path,
+    c: DatabaseConfig,
     *,
     on_existing: Literal["raise", "replace"] = "replace",
 ) -> None:
-    """Dump the entirety of a Postgres cluster from a tar archive."""
-    if directory.exists():
-        if on_existing == "raise":
-            raise RuntimeError(f"Directory {directory} already exists")
-        shutil.rmtree(directory)
-
-    with tarfile.open(archive) as tar:
-        tar.extractall(directory.parent)
+    cmd: list[str] = [
+        str(postgresql_binaries.bin() / "pg_restore"),
+        *("--host", c.host),
+        *("--port", str(c.port)),
+        *("--username", c.user),
+        *(("--password", c.password) if c.password else ()),
+        *("--dbname", c.database),
+        *(("--clean",) if on_existing == "replace" else ()),
+        str(archive),
+    ]
+    subprocess.check_call(cmd)
 
 
 def _try_connect(dsn: str) -> None:

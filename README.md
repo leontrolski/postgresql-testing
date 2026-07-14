@@ -1,6 +1,6 @@
 # Postgresql testing
 
-Simple Postgres helpers for testing with Python - no docker, brew, apt, etc - uses [postgresql-binaries](https://github.com/leontrolski/postgresql-binaries).
+Simple Postgres helpers for testing with Python - no docker, brew, apt, etc - uses [postgresql-binaries](https://github.com/leontrolski/postgresql-binaries). The interface is simple, but close enough to the metal that you can use it to eg. have a new database per testing thread/use a fresh database from a `TEMPLATE` or archive.
 
 ```shell
 pip install postgresql-testing 'postgresql-binaries==18.*'
@@ -25,4 +25,20 @@ There are various useful flags and things - the source code is short enough to j
 
 <hr>
 
-There are a couple of helpers for creating/using template dbs and tar files. I have some vague long term plan for some kind of "Docker layers for migrated databases" with clever caching, but I'm not quite sure what it looks like yet.
+There are a couple of helpers for creating/using template dbs and archives. I have some vague long term plan for some kind of "Docker layers for migrated databases" with clever caching (or not), but I'm not quite sure what it looks like yet.
+
+Some benchmarking:
+
+| number of tables | create from template | dump to archive | create from archive |
+|---|---|---|---|
+| 100 | 80ms | 80ms (0.2MB) | 150ms |
+| 1000 | 500ms | 300ms (2MB) | 1100ms |
+
+On macos using a ramdisk, it is slightly quicker:
+
+| number of tables | create from template | dump to archive | create from archive |
+|---|---|---|---|
+| 100 | 70ms | 70ms | 120ms |
+| 1000 | 350ms | 300ms | 1000ms |
+
+See claims/advice from planet [Go](https://github.com/peterldowns/pgtestdb).
