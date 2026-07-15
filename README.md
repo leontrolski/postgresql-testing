@@ -31,6 +31,12 @@ You can spin up a fresh db for immediate testing with:
 postgresql-testing-serve postgres://testing:@localhost:8421/my-db
 ```
 
+Or if you want a throwaway Postgres from anywhere:
+
+```bash
+uvx --from 'postgresql-testing[16]' postgresql-testing-serve
+```
+
 <hr id="postgresql-testing-explain">
 
 Bundled for good measure is a local-first copy of [explain.dalibo.com](https://explain.dalibo.com/)
