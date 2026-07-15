@@ -94,7 +94,7 @@ def initdb(
     *,
     on_existing: Literal["raise", "use", "replace"] = "raise",
 ) -> None:
-    if directory.exists():
+    if directory.exists() and (directory / "postgresql.conf").exists():
         if on_existing == "raise":
             raise PostgresqlTestingError(f"Directory {directory} already exists")
         if on_existing == "replace":
