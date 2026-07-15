@@ -1,9 +1,9 @@
-# Postgresql testing
+# Postgresql Testing
 
 Simple Postgres helpers for testing with Python - no docker, brew, apt, etc - uses [postgresql-binaries](https://github.com/leontrolski/postgresql-binaries). The interface is simple, but close enough to the metal that you can use it to eg. have a new database per testing thread/use a fresh database from a `TEMPLATE` or archive.
 
 ```shell
-pip install postgresql-testing 'postgresql-binaries==18.*'
+pip install 'postgresql-testing[15]'
 ```
 
 Then to use with pytest, eg:
@@ -33,7 +33,7 @@ postgresql-testing-serve postgres://testing:@localhost:8421/my-db
 
 <hr id="postgresql-testing-explain">
 
-Bundled for good measure is a local-first copy of [explain.dalibo.com](https://explain.dalibo.com/).
+Bundled for good measure is a local-first copy of [explain.dalibo.com](https://explain.dalibo.com/)
 
 Get your query plan by:
 

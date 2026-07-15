@@ -1,6 +1,6 @@
 [project]
 name = "postgresql-testing"
-version = "0.0.7"
+version = "0.0.8"
 description = "PostgreSQL testing helpers"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -37,6 +37,13 @@ test = [
     "mypy",
     "ruff",
 ]
+
+[project.optional-dependencies]
+"18" = ["postgresql-binaries==18.*"]
+"17" = ["postgresql-binaries==17.*"]
+"16" = ["postgresql-binaries==16.*"]
+"15" = ["postgresql-binaries==15.*"]
+"14" = ["postgresql-binaries==14.*"]
 
 [tool.ruff]
 line-length = 120
