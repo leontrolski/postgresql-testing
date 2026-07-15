@@ -5,11 +5,14 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 import shutil
 import subprocess
+import sys
+import time
 from typing import Iterator, Literal, Self
+from urllib.parse import urlparse
 import postgresql_binaries
 import psycopg
 
-DEFAULT_DIR = Path("/tmp/postgresql-testing")
+DEFAULT_DIR = Path(".postgresql-testing")
 SUPERUSER = "postgres"
 ROOT_DATABASE = "postgres"
 
@@ -63,6 +66,23 @@ class DatabaseConfig(ClusterConfig):
             password=password,
             host="localhost",
             port=port,
+            database=database,
+            stderr=logs / f"{database}.log",
+            directory=directory,
+        )
+
+    @classmethod
+    def default_from_dsn(cls, dsn: str) -> Self:
+        directory = DEFAULT_DIR / "database"
+        logs = directory.parent / "logs"
+        logs.mkdir(parents=True, exist_ok=True)
+        parsed = urlparse(dsn)
+        database = parsed.path.lstrip("/")
+        return cls(
+            user=parsed.username or "testing",
+            password=parsed.password or "",
+            host=parsed.hostname or "localhost",
+            port=int(parsed.port or 8421),
             database=database,
             stderr=logs / f"{database}.log",
             directory=directory,
@@ -238,3 +258,19 @@ def _try_connect(dsn: str) -> None:
         except psycopg.OperationalError:
             pass
     raise PostgresqlTestingError(f"Could not connect to {dsn}")
+
+
+def cli_serve() -> None:
+    if len(sys.argv) > 1:
+        dsn = sys.argv[1]
+        config = DatabaseConfig.default_from_dsn(dsn)
+    else:
+        config = DatabaseConfig.default("cli")
+
+    initdb(config.directory, on_existing="use")
+    with serve(config):
+        ensure_user(config)
+        create_database(config, on_existing="replace")
+        print(f"Serving {config.dsn}")
+        while True:
+            time.sleep(1)

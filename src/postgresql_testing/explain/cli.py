@@ -5,7 +5,6 @@ import select
 import socketserver
 import sys
 import threading
-import time
 import webbrowser
 
 

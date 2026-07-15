@@ -10,4 +10,4 @@ wheels/
 .venv
 
 # postresql_testing
-.postgresql_testing/
+.postgresql-testing/
