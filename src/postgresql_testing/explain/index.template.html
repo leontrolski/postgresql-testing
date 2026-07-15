@@ -1,0 +1,33 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>EXPLAIN ANALYZE</title>
+    <!--
+    Example from:
+        https://github.com/dalibo/pev2@f0c4b65de2bd09d5eded66de72a37877b55faf7c
+
+    Vendored code from:
+        curl -L -O https://unpkg.com/vue@3/dist/vue.global.prod.js
+        curl -L -O https://unpkg.com/pev2/dist/pev2.umd.js
+        curl -L -O https://unpkg.com/bootstrap@5/dist/css/bootstrap.min.css
+        curl -L -O https://unpkg.com/pev2/dist/pev2.css
+    -->
+    <script src="./vue.global.prod.js"></script>
+    <script src="./pev2.umd.js"></script>
+    <link href="./bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="./pev2.css" />
+</head>
+<div id="app" class="d-flex flex-column vh-100">
+  <pev2 :plan-source="plan" plan-query="" />
+</div>
+<script>
+  const { createApp } = Vue
+  const plan = `{{ plan }}`
+  const app = createApp({ data: () => ({plan})})
+  app.component("pev2", pev2.Plan)
+  app.mount("#app")
+</script>
+
+</html>

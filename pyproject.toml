@@ -1,6 +1,6 @@
 [project]
 name = "postgresql-testing"
-version = "0.0.5"
+version = "0.0.6"
 description = "PostgreSQL testing helpers"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -16,10 +16,18 @@ dependencies = [
 [project.urls]
 repository = "https://github.com/leontrolski/postgresql-testing"
 
+[project.scripts]
+sqlexplain = "postgresql_testing.explain.cli:main"
+
 [build-system]
 requires = ["uv_build>=0.11.7,<0.12.0"]
 build-backend = "uv_build"
 
+[tool.setuptools.package-data]
+"postgresql_testing" = [
+    "py.typed",
+    "explain/*",
+]
 
 [dependency-groups]
 test = [

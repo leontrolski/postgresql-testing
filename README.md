@@ -23,6 +23,22 @@ def db() -> Iterator[str]:
 
 There are various useful flags and things - the source code is short enough to just dive in.
 
+<hr id="sqlexplain">
+
+Bundled for good measure is a local-first copy of [explain.dalibo.com](https://explain.dalibo.com/).
+
+Get your query plan by:
+
+```sql
+EXPLAIN (ANALYZE, COSTS, VERBOSE, BUFFERS, FORMAT JSON) SELECT ...
+```
+
+Then copy and:
+
+```bash
+pbpaste | sqlexplain
+```
+
 <hr>
 
 There are a couple of helpers for creating/using template dbs and archives. I have some vague long term plan for some kind of "Docker layers for migrated databases" with clever caching (or not), but I'm not quite sure what it looks like yet.
